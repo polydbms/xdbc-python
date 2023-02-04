@@ -35,7 +35,7 @@ target_include_directories(xdbc PUBLIC ${PROJECT_INCLUDE_DIR})
 target_link_libraries(xdbc PUBLIC -lpq pybind11::module xtensor-python Python3::NumPy ${Python3_LIBRARIES})
 
 # Install
-#install(TARGETS xdbc DESTINATION lib)
+install(TARGETS xdbc DESTINATION lib)
 
 # Install the headers
 #install(FILES include/xdbc.h DESTINATION xdbc)

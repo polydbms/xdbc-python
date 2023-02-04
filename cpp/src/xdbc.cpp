@@ -94,7 +94,7 @@ namespace xdbc {
     }
 
 
-    void XClient::load(std::string table) {
+    py::list XClient::load(std::string table) {
         std::cout << "Fetching table:" << table << std::endl;
 
         std::thread t1(&XClient::receive, this);
@@ -168,6 +168,6 @@ namespace xdbc {
 
         t1.join();
 
-        //return list;
+        return list;
     }
 }

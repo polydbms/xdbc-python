@@ -12,4 +12,4 @@
 
 add_executable(test_xdbc src/test_xdbc.cpp)
 
-target_link_libraries(test_xdbc PUBLIC xdbc pybind11::module Python3::NumPy ${Python_LIBRARIES})
+target_link_libraries(test_xdbc PUBLIC xdbc pybind11::module Python3::NumPy ${Python3_LIBRARIES})

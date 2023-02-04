@@ -42,7 +42,7 @@ target_link_libraries(pyxdbc PUBLIC xdbc pybind11::module xtensor-python Python3
 set(PYTHON_LIBRARY_DIR "/home/harry/miniconda3/lib/python3.9/site-packages")
 set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
 
-install(TARGETS xdbc pyxdbc
+install(TARGETS pyxdbc
         COMPONENT python
         LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
         )
