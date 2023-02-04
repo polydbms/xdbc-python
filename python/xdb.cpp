@@ -12,7 +12,7 @@ void init_xdbc(py::module &);
 
 namespace x {
 
-    PYBIND11_MODULE(xdbc, m) {
+    PYBIND11_MODULE(pyxdbc, m) {
         xt::import_numpy();
         m.doc() = "XDB library";
 

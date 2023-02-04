@@ -34,13 +34,15 @@ pybind11_add_module(pyxdbc
         #${HEADER_FILES}
         ${PYTHON_FILES}
         )
-#add_subdirectory(./cpp)
+add_subdirectory(./cpp)
+
+target_include_directories(pyxdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
 target_link_libraries(pyxdbc PUBLIC xdbc pybind11::module xtensor-python Python3::NumPy -lpq)
 
 set(PYTHON_LIBRARY_DIR "/home/harry/miniconda3/lib/python3.9/site-packages")
 set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
 
-install(TARGETS pyxdbc
+install(TARGETS xdbc pyxdbc
         COMPONENT python
         LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
         )

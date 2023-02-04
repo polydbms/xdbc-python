@@ -2,14 +2,14 @@ import xdbc
 import numpy as np
 import pandas as pd
 import datetime
-
+from inspect import getmembers, isfunction
 np.set_printoptions(suppress=True)
 pd.set_option('display.max_columns', None)  # or 1000
 pd.set_option('display.max_rows', None)  # or 1000
 pd.set_option('display.max_colwidth', None)  # or 199
 
 a = datetime.datetime.now()
-
+print(getmembers(xdbc), isfunction)
 c = xdbc.XClient("Client")
 print("Made an xdbc client called: %s" % c.get_name())
 list = c.load("lineitem.l_orderkey")

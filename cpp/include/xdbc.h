@@ -42,7 +42,8 @@ namespace xdbc {
 
         void receive();
 
-        py::list load(std::string);
+        //py::list load(std::string);
+        void load(std::string);
     };
 
 

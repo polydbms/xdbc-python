@@ -1,4 +1,4 @@
-#include "../../include/xdbc.h"
+#include <xdbc.h>
 #include <iostream>
 
 
@@ -9,7 +9,7 @@ int main() {
 
     std::cout << "Made XClient called: " << c.get_name() << std::endl;
 
-    //c.load("lalala");
+    c.load("lalala");
     //c.receive();
 
 

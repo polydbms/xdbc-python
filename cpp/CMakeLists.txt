@@ -11,14 +11,14 @@
 #include_directories(/usr/local/include /usr/include/python3.10)
 #find_package(Python3 REQUIRED COMPONENTS Interpreter Development NumPy)
 #find_package(pybind11 REQUIRED)
-include_directories(${Python_INCLUDE_DIRS})
+include_directories(${Python3_INCLUDE_DIRS})
 
 # Src
 AUX_SOURCE_DIRECTORY(src SRC_FILES)
 
 # Headers
-set(PROJECT_SOURCE_DIR "src")
-set(PROJECT_INCLUDE_DIR "include")
+set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Source files
 set(SOURCE_FILES
@@ -30,18 +30,17 @@ set(SOURCE_FILES
 add_library(xdbc SHARED ${SOURCE_FILES})
 
 # Include directories
-target_include_directories(xdbc PRIVATE include)
+target_include_directories(xdbc PUBLIC ${PROJECT_INCLUDE_DIR})
 
-target_link_libraries(xdbc PUBLIC -lpq pybind11::module Python3::NumPy ${Python3_LIBRARIES})
-
+target_link_libraries(xdbc PUBLIC -lpq pybind11::module xtensor-python Python3::NumPy ${Python3_LIBRARIES})
 
 # Install
-install(TARGETS xdbc DESTINATION lib)
+#install(TARGETS xdbc DESTINATION lib)
 
 # Install the headers
 #install(FILES include/xdbc.h DESTINATION xdbc)
 
 # Create base directory
-install(FILES include/xdbc.h DESTINATION include/xdbc)
+#install(FILES include/xdbc.h DESTINATION include/xdbc)
 
 add_subdirectory(./tests)

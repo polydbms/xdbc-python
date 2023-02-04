@@ -1,4 +1,4 @@
-#include "../include/xdbc.h"
+#include <xdbc.h>
 
 #include <iostream>
 #include <pybind11/numpy.h>
@@ -94,7 +94,7 @@ namespace xdbc {
     }
 
 
-    py::list XClient::load(std::string table) {
+    void XClient::load(std::string table) {
         std::cout << "Fetching table:" << table << std::endl;
 
         std::thread t1(&XClient::receive, this);
@@ -168,6 +168,6 @@ namespace xdbc {
 
         t1.join();
 
-        return list;
+        //return list;
     }
 }

@@ -1,4 +1,4 @@
-#include "../cpp/include/xdbc.h"
+#include <xdbc.h>
 
 
 #include <pybind11/stl.h>
@@ -15,7 +15,7 @@ void init_xdbc(py::module &m) {
             .def("get_name",
                  py::overload_cast<>(&xdbc::XClient::get_name, py::const_))
             .def("load",
-                 py::overload_cast<const std::string>(&xdbc::XClient::load),
+                 py::overload_cast<std::string>(&xdbc::XClient::load),
                  py::arg("table"),
                  py::return_value_policy::move);
 }
