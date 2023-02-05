@@ -1,7 +1,7 @@
 #cmake_minimum_required(VERSION 3.21)
 
 #project(xdbc)
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 #set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_EXTENSIONS OFF)
@@ -29,10 +29,11 @@ set(SOURCE_FILES
 # Add library
 add_library(xdbc SHARED ${SOURCE_FILES})
 
-# Include directories
-target_include_directories(xdbc PUBLIC ${PROJECT_INCLUDE_DIR})
 
-target_link_libraries(xdbc PUBLIC -lpq pybind11::module xtensor-python Python3::NumPy ${Python3_LIBRARIES})
+# Include directories
+target_include_directories(xdbc PUBLIC ${PROJECT_INCLUDE_DIR} pybind11::headers ${Python3_INCLUDE_DIRS})
+
+target_link_libraries(xdbc PUBLIC -lpq pybind11::headers xtensor-python Python3::NumPy ${Python3_LIBRARIES})
 
 # Install
 install(TARGETS xdbc DESTINATION lib)

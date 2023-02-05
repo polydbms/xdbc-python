@@ -10,7 +10,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
-set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_FLAGS "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 
@@ -24,10 +24,13 @@ file(GLOB PYTHON_FILES "python/*.cpp" "python/*.hpp")
 # Set up such that XCode organizes the files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES} ${HEADER_FILES} ${PYTHON_FILES})
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development NumPy)
+find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
 find_package(pybind11 REQUIRED)
 find_package(xtensor REQUIRED)
 find_package(xtensor-python REQUIRED)
+
+message(STATUS pybind11::headers)
+
 
 pybind11_add_module(pyxdbc
         #${SOURCE_FILES}
@@ -36,8 +39,8 @@ pybind11_add_module(pyxdbc
         )
 add_subdirectory(./cpp)
 
-target_include_directories(pyxdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
-target_link_libraries(pyxdbc PUBLIC xdbc pybind11::module xtensor-python Python3::NumPy -lpq)
+target_include_directories(pyxdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include pybind11::headers)
+target_link_libraries(pyxdbc PUBLIC xdbc xtensor-python Python3::NumPy -lpq pybind11::headers)
 
 set(PYTHON_LIBRARY_DIR "/home/harry/miniconda3/lib/python3.9/site-packages")
 set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")

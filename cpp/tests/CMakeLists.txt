@@ -10,6 +10,9 @@
 #message(${Python_INCLUDE_DIRS})
 #find_library(XDBC_LIB xdbc HINTS /usr/local/lib/)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 add_executable(test_xdbc src/test_xdbc.cpp)
 
-target_link_libraries(test_xdbc PUBLIC xdbc pybind11::module Python3::NumPy ${Python3_LIBRARIES})
+target_link_libraries(test_xdbc PUBLIC pybind11::headers xdbc xtensor-python Python3::NumPy )
+target_include_directories(test_xdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include pybind11::headers)

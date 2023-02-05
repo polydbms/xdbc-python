@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+#include <pybind11/pytypes.h>
 #include <boost/asio.hpp>
 #include <thread>
 #include <chrono>
@@ -94,7 +96,7 @@ namespace xdbc {
     }
 
 
-    py::list XClient::load(std::string table) {
+    pybind11::list XClient::load(std::string table) {
         std::cout << "Fetching table:" << table << std::endl;
 
         std::thread t1(&XClient::receive, this);
