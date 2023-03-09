@@ -10,9 +10,8 @@ pd.set_option('display.max_colwidth', None)  # or 199
 
 a = datetime.datetime.now()
 print(getmembers(pyxdbc), isfunction)
-c = pyxdbc.XClient("Client")
-print("Made an xdbc client called: %s" % c.get_name())
-list = c.load("lineitem.l_orderkey")
+total_tuples = 100000000
+list = pyxdbc.load("test_"+str(total_tuples), total_tuples)
 
 '''
 local_arr = np.array([1, 2, 3])

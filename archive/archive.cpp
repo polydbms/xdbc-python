@@ -117,13 +117,13 @@ namespace xdbc {
 
             for (auto sl: _bufferPool[bpi]) {
                 //TODO: dirty fix
-                printSl(&sl);
-                if (sl.l_orderkey != -1) {
-                    memcpy(&ints[tupleCnt * 4], &sl, 4 * sizeof(int));
-                    memcpy(&doubles[tupleCnt * 4], &sl.l_quantity, 4 * sizeof(double));
 
-                    tupleCnt++;
-                }
+
+                memcpy(&ints[tupleCnt * 4], &sl, 4 * sizeof(int));
+                memcpy(&doubles[tupleCnt * 4], &sl.l_quantity, 4 * sizeof(double));
+
+                tupleCnt++;
+
                 /*for (int j = 0; j < 4; j++) {
                     memcpy(&ints[i * 4 + j], &sl + i * TUPLE_SIZE + j * sizeof(int), sizeof(int));
                     memcpy(&doubles[i * 4 + j], &sl + i * TUPLE_SIZE + 16 + j * sizeof(double),
