@@ -26,15 +26,16 @@ pybind11_add_module(pyxdbc
 
 #target_include_directories(pyxdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
 #target_link_libraries(pyxdbc PUBLIC xdbc pybind11::module xtensor-python Python3::NumPy -lpq)
+
 target_link_libraries(pyxdbc PUBLIC xdbc pybind11::module Python3::NumPy -lpq)
+include_directories(/xdbc-client/xdbc/)
+#set(PYTHON_LIBRARY_DIR "/home/harry/miniconda3/lib/python3.9/site-packages")
+#set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
+#set(PYTHON_LIBRARIES "/home/harry/miniconda3/lib/libpython3.9.so")
 
-set(PYTHON_LIBRARY_DIR "/home/harry/miniconda3/lib/python3.9/site-packages")
-set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
-set(PYTHON_LIBRARIES "/home/harry/miniconda3/lib/libpython3.9.so")
-
-#set(PYTHON_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages")
-#set(PYTHON_EXECUTABLE "/root/miniconda3/envs/python39/bin/python3")
-#set(PYTHON_LIBRARIES "/root/miniconda3/envs/python39/lib/libpython3.9.so")
+set(PYTHON_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages")
+set(PYTHON_EXECUTABLE "/root/miniconda3/envs/python39/bin/python3")
+set(PYTHON_LIBRARIES "/root/miniconda3/envs/python39/lib/libpython3.9.so")
 
 install(TARGETS pyxdbc
         COMPONENT python
