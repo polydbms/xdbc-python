@@ -4,6 +4,7 @@ import pandas as pd
 import datetime
 from inspect import getmembers, isfunction
 
+#build cmd: `cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/ && python ../tests/pandas_xdbc.py `
 np.set_printoptions(suppress=True)
 pd.set_option('display.max_columns', None)  # or 1000
 pd.set_option('display.max_rows', None)  # or 1000
@@ -36,7 +37,7 @@ table_name = "lineitem_sf10"
 pyenv = {
     'env_name': "PyXDBC Client",
     'table': table_name,
-    'iformat': 2,
+    'iformat': 1,
     'buffer_size': 1024,
     'bufferpool_size': 65536,
     'sleep_time': 1,

@@ -61,7 +61,7 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
                     std::vector <std::vector<std::string>> &string_columns) {
 
     std::string stringValue;
-
+    env.pts->push(xdbc::ProfilingTimestamps{std::chrono::high_resolution_clock::now(), thread_num, "write", "start"});
     //TODO: for columnar format (2)
     size_t baseOffset = 0;
     std::vector <size_t> offsets(env.schema.size());
@@ -140,8 +140,6 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
                     cnt++;
                 }
             }
-#include <algorithm> // Ensure this include directive is present at the top of your file
-#include <cstring>   // Ensure this include directive is present for using memcpy
 
             if (curBuffWithId.iformat == 2) {
                 char *dataPtr = reinterpret_cast<char *>(curBuffWithId.buff);
@@ -171,7 +169,8 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
 
                     for (size_t j = 0; j < schemaSize; ++j) {
                         const auto &attr = env.schema[j];
-                        char *data_ptr = reinterpret_cast<char *>(pointers[j]) + (curBuffWithId.totalTuples - tuplesRemaining) * attr_sizes[j];
+                        char *data_ptr = reinterpret_cast<char *>(pointers[j]) +
+                                         (curBuffWithId.totalTuples - tuplesRemaining) * attr_sizes[j];
 
                         switch (attr.tpe[0]) {
                             case 'I': {
@@ -212,20 +211,20 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
             spdlog::get("pyXCLIENT")->info("Thread {0}, found buffer with id {1}", thread_num, curBuffWithId.id);
         }
         c.markBufferAsRead(curBuffWithId.id);
+        env.pts->push(
+                xdbc::ProfilingTimestamps{std::chrono::high_resolution_clock::now(), thread_num, "write", "push"});
     }
 
     if (cnt < end_idx)
         queue->push((Partition) {cnt, end_idx});
     spdlog::get("pyXCLIENT")->info("Thread {0}, processed tuples {1}", thread_num, totalCnt);
     spdlog::get("pyXCLIENT")->warn("Thread {0}, hasNext {1}", thread_num, c.hasNext(thread_num));
-
+    env.pts->push(xdbc::ProfilingTimestamps{std::chrono::high_resolution_clock::now(), thread_num, "write", "end"});
 }
 
 
 py::list load(std::string table, int total_tuples, py::dict pyEnv) {
-
-    auto start_profiling = std::chrono::high_resolution_clock::now();
-
+    auto start_profiling = std::chrono::steady_clock::now();
     auto console = spdlog::stdout_color_mt("pyXCLIENT");
 
     xdbc::RuntimeEnv env;
@@ -243,8 +242,6 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
     env.server_host = pyEnv["server_host"].cast<std::string>();
     env.server_port = pyEnv["server_port"].cast<std::string>();
 
-    env.profilingBufferCnt = pyEnv["profiling_breakpoint"].cast<long>();
-
     //create schema
     std::vector <xdbc::SchemaAttribute> schema;
 
@@ -261,22 +258,11 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
 
     env.tuples_per_buffer = env.buffer_size * 1024 / env.tuple_size;
 
-
-    cout << env.tuple_size << endl;
-    cout << env.tuples_per_buffer << endl;
-
-    env.rcv_time = 0;
-    env.decomp_time = 0;
-    env.write_time = 0;
-
-    env.rcv_wait_time = 0;
-    env.decomp_wait_time = 0;
-    env.write_wait_time = 0;
+    env.startTime = std::chrono::steady_clock::now();
 
     xdbc::XClient c(env);
 
     spdlog::get("pyXCLIENT")->info("Constructed XClient called: {0}", c.get_name());
-
     c.startReceiving(env.table);
     spdlog::get("pyXCLIENT")->info("Started receiving");
 
@@ -340,10 +326,11 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
         thread.join();
     }
     c.finalize();
-    auto duration_profiling = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now() - start_profiling).count();
 
-    spdlog::get("pyXCLIENT")->info("Data Transfer: {0}ms", duration_profiling / 1000);
+    auto end = std::chrono::steady_clock::now();
+    auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_profiling).count();
+
+    spdlog::get("pyXCLIENT")->info("Data Transfer: {0}ms", total_time / 1000);
     auto start_arrays = std::chrono::high_resolution_clock::now();
 
     for (const auto &column: int_columns) {
@@ -356,7 +343,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
     }
 
     py::list result;
-
+    spdlog::get("pyXCLIENT")->info("starting np array construction");
     // Create numpy arrays for int columns
     for (auto &column: int_columns) {
         auto array = py::array_t<int>(
@@ -367,6 +354,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
         result.append(array);
     }
 
+    spdlog::get("pyXCLIENT")->info("constructed int");
     // Create numpy arrays for double columns
     for (auto &column: double_columns) {
         auto array = py::array_t<double>(
@@ -376,6 +364,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
         );
         result.append(array);
     }
+    spdlog::get("pyXCLIENT")->info("constructed double");
 
     for (auto &column: char_columns) {
         // Create a numpy array with dtype=object
@@ -391,7 +380,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
         column.clear();
         column.shrink_to_fit();
     }
-
+    spdlog::get("pyXCLIENT")->info("constructed chars");
 
     for (auto &column: string_columns) {
         // Create a numpy array with dtype=object
@@ -408,6 +397,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
         column.clear();
         column.shrink_to_fit();
     }
+    spdlog::get("pyXCLIENT")->info("constructed strings");
     auto duration_arrays = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start_arrays).count();
     spdlog::get("pyXCLIENT")->info("Array creation: {0}ms", duration_arrays / 1000);
