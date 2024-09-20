@@ -223,10 +223,11 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
 }
 
 
-py::list load(std::string table, int total_tuples, py::dict pyEnv) {
+py::list load(py::dict pyEnv) {
     auto start_profiling = std::chrono::steady_clock::now();
     auto console = spdlog::stdout_color_mt("pyXCLIENT");
 
+    int total_tuples = pyEnv["total_tuples"].cast<int>();
     xdbc::RuntimeEnv env;
     env.env_name = pyEnv["env_name"].cast<std::string>();
     env.table = pyEnv["table"].cast<std::string>();
@@ -282,7 +283,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
 
         switch (attr.tpe[0]) {
             case 'I': {
-                int_columns.emplace_back(std::vector<int>(total_tuples, -1));
+                int_columns.emplace_back(std::vector<int>(total_tuples, -999));
                 break;
             }
             case 'D': {
@@ -330,16 +331,21 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
     auto end = std::chrono::steady_clock::now();
     auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_profiling).count();
 
-    spdlog::get("pyXCLIENT")->info("Data Transfer: {0}ms", total_time / 1000);
+    spdlog::get("pyXCLIENT")->info("Data Transfer: {0}s", total_time / 1000);
     auto start_arrays = std::chrono::high_resolution_clock::now();
 
+    int column_index = 0;
     for (const auto &column: int_columns) {
+        int value_index = 0;
         for (const auto &value: column) {
-            if (value == -1) {
-                std::cerr << "Unwritten int value detected!" << std::endl;
+            if (value == -999) {
+                std::cerr << "Unwritten int value detected in column "
+                          << column_index << " at value index " << value_index << std::endl;
                 break;
             }
+            ++value_index;
         }
+        ++column_index;
     }
 
     py::list result;
@@ -400,7 +406,7 @@ py::list load(std::string table, int total_tuples, py::dict pyEnv) {
     spdlog::get("pyXCLIENT")->info("constructed strings");
     auto duration_arrays = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start_arrays).count();
-    spdlog::get("pyXCLIENT")->info("Array creation: {0}ms", duration_arrays / 1000);
+    spdlog::get("pyXCLIENT")->info("Array creation: {0}s", duration_arrays / 1000);
 
     return result;
 };

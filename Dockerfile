@@ -39,4 +39,11 @@ RUN echo "source activate python39" > ~/.bashrc
 RUN full_path=$(locate psqlodbca.so | head -n 1) && \
     sed -i "s|Driver=psqlodbca.so|Driver=$full_path|g" /etc/odbcinst.ini
 
+COPY python/ /workspace/python
+COPY tests/ /workspace/tests
+COPY CMakeLists.txt /workspace
+
+RUN cd /workspace && mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/
+
 WORKDIR /workspace
