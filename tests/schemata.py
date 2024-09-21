@@ -1,3 +1,52 @@
+import pandas as pd
+import numpy as np
+
+
+def reassign_columns(schema, data, type_order=('S', 'I', 'D', 'C')):
+    """
+    Rearranges columns of data based on the provided schema and type order.
+    Avoids copying data by using numpy arrays.
+
+    Args:
+    - schema: List of tuples [(column_name, type)].
+    - data: List of numpy arrays grouped by type in the order ('S', 'I', 'D', 'C').
+    - type_order: Tuple specifying the order of types in the data list (default: ('S', 'I', 'D', 'C')).
+
+    Returns:
+    - pd.DataFrame with columns rearranged according to the schema, without copying data.
+    """
+
+    # Create a dictionary to hold data based on types
+    data_by_type = {
+        'S': [],  # String data (numpy object arrays for strings)
+        'I': [],  # Integer data
+        'D': [],  # Double data
+        'C': []  # Char data (can also be handled as strings for simplicity)
+    }
+
+    # Populate the data_by_type dictionary based on the given data
+    data_idx = 0  # Index to track the next data column to assign
+    for dtype in type_order:
+        # Depending on the type, assign columns to the correct type group
+        num_columns = sum(1 for _, t in schema if t == dtype)
+        data_by_type[dtype] = data[data_idx:data_idx + num_columns]
+        data_idx += num_columns
+
+    # Initialize a dictionary to hold the final reassigned data (numpy arrays)
+    reassigned_data = {}
+
+    # Assign columns to the correct names and positions based on the schema
+    type_counters = {dtype: 0 for dtype in type_order}  # To track how many of each type we have used
+    for col_name, col_type in schema:
+        # Get the next column of the correct type (without copying data)
+        reassigned_data[col_name] = data_by_type[col_type][type_counters[col_type]]
+        # Increment the counter for the type
+        type_counters[col_type] += 1
+
+    # Create and return a DataFrame with the reassigned data (without copying)
+    return pd.DataFrame(reassigned_data, copy=False)
+
+
 sizes = {
     'lineitem_sf10': 59986052,
     'inputeventsm': 8978893,

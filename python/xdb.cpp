@@ -52,9 +52,11 @@ struct Partition {
     long startOffset;
     long endOffset;
 };
-typedef std::shared_ptr <customQueue<Partition>> FBQ_ptr;
 
-void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int thread_num,
+typedef std::shared_ptr <customQueue<Partition>> FBQ_ptr;
+typedef std::shared_ptr <customQueue<Partition>> ST_ptr;
+
+void process_buffer(ST_ptr serqueue, FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int thread_num,
                     std::vector <std::vector<int>> &int_columns,
                     std::vector <std::vector<double>> &double_columns,
                     std::vector <std::vector<char>> &char_columns,
@@ -81,6 +83,9 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
     auto p = queue->pop();
     auto cnt = p.startOffset;
     auto end_idx = p.endOffset;
+    auto startSerTask = cnt;
+    auto endSerTask = end_idx;
+
 
     spdlog::get("pyXCLIENT")->info("Thread {0}, partition [{1},{2}]", thread_num, cnt, end_idx);
     while (c.hasNext(thread_num)) {
@@ -103,11 +108,19 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
                     for (size_t j = 0; j < env.schema.size(); ++j) {
 
                         if (cnt >= end_idx) {
+                            //TODO: check this logic
+                            /* spdlog::get("pyXCLIENT")->info(
+                                     "Thread {} Sending, [{},{}] to deserializer before receiving new slice",
+                                     thread_num, startSerTask, cnt);*/
+                            Partition serTask{startSerTask, cnt};
+                            serqueue->push(serTask);
+
                             spdlog::get("pyXCLIENT")->info("Thread {0}, requesting new slice", thread_num);
                             auto p = queue->pop();
                             cnt = p.startOffset;
                             end_idx = p.endOffset;
                             spdlog::get("pyXCLIENT")->info("Thread {0}, got slice [{1},{2}]", thread_num, cnt, end_idx);
+                            startSerTask = cnt;
                         }
 
                         const auto &attr = env.schema[j];
@@ -136,9 +149,16 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
                         }
                         offset += attr.size;
                     }
+
                     totalCnt++;
                     cnt++;
                 }
+                /*spdlog::get("pyXCLIENT")->info("Thread {} sending [{},{}] to deserializer",
+                                               thread_num, startSerTask, cnt);*/
+                Partition serTask{startSerTask, cnt};
+                serqueue->push(serTask);
+                startSerTask = cnt;
+
             }
 
             if (curBuffWithId.iformat == 2) {
@@ -200,6 +220,11 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
                         }
                     }
 
+                    Partition serTask;
+                    serTask.startOffset = cnt;
+                    serTask.endOffset = cnt + tuplesToProcess;
+                    serqueue->push(serTask);
+
                     tuplesRemaining -= tuplesToProcess;
                     cnt += tuplesToProcess;
                     totalCnt += tuplesToProcess;
@@ -220,6 +245,43 @@ void process_buffer(FBQ_ptr queue, xdbc::XClient &c, xdbc::RuntimeEnv &env, int 
     spdlog::get("pyXCLIENT")->info("Thread {0}, processed tuples {1}", thread_num, totalCnt);
     spdlog::get("pyXCLIENT")->warn("Thread {0}, hasNext {1}", thread_num, c.hasNext(thread_num));
     env.pts->push(xdbc::ProfilingTimestamps{std::chrono::high_resolution_clock::now(), thread_num, "write", "end"});
+    Partition serTask{-1, thread_num};
+    serqueue->push(serTask);
+}
+
+void serializeStrings(ST_ptr serqueue, std::vector <std::vector<std::string>> &string_columns,
+                      std::vector <py::array> &py_arrays, int write_parallelism) {
+    spdlog::get("pyXCLIENT")->info("Started string deserialization");
+    int end_tasks_received = 0;
+    Partition st = serqueue->pop();
+    int totalDeserialized = 0;
+
+    while (end_tasks_received < write_parallelism) {
+
+        int py_array_idx = 0;
+        for (auto &column: string_columns) {
+            auto str_array_data = reinterpret_cast<py::object *>(py_arrays[py_array_idx].mutable_data());
+            for (size_t i = st.startOffset; i < st.endOffset; ++i) {
+                str_array_data[i] = py::reinterpret_steal<py::object>(
+                        PyUnicode_FromStringAndSize(column[i].c_str(), column[i].size()));
+                totalDeserialized++;
+
+            }
+            py_array_idx++;
+        }
+
+        st = serqueue->pop();
+        if (st.startOffset == -1) {
+            end_tasks_received++;
+            spdlog::get("pyXCLIENT")->info("Writer {0} sent all strings end_tasks: {1}", st.endOffset, st.startOffset);
+        }
+    }
+
+    for (auto &column: string_columns) {
+        column.clear();
+        column.shrink_to_fit();
+    }
+    spdlog::get("pyXCLIENT")->info("constructed strings: {}", totalDeserialized);
 }
 
 
@@ -305,27 +367,48 @@ py::list load(py::dict pyEnv) {
 
     }
 
+    py::list result;
+
+    std::vector <py::array> py_string_arrays;
+
+    for (auto &column: string_columns) {
+
+        py::array str_array = py::array(py::dtype("O"), py::array::ShapeContainer{column.size()});
+
+        py_string_arrays.push_back(str_array);
+
+        result.append(str_array);
+    }
+
     // Create a thread pool
     std::vector <std::thread> threads;
     int base_tuples_per_thread = total_tuples / env.write_parallelism;
     int extra_tuples = total_tuples % env.write_parallelism;
 
     FBQ_ptr q(new customQueue <Partition>);
+    ST_ptr sq(new customQueue <Partition>);
+
+    std::thread stringSerThread = std::thread(serializeStrings, std::ref(sq), std::ref(string_columns),
+                                              std::ref(py_string_arrays), env.write_parallelism);
 
     for (int i = 0; i < env.write_parallelism; ++i) {
         int start_idx = i * base_tuples_per_thread + std::min(i, extra_tuples);
         int end_idx = start_idx + base_tuples_per_thread + (i < extra_tuples ? 1 : 0);
         q->push((Partition) {start_idx, end_idx});
 
-        threads.emplace_back(process_buffer, std::ref(q), std::ref(c), std::ref(env), i,
+        threads.emplace_back(process_buffer, std::ref(sq), std::ref(q), std::ref(c), std::ref(env), i,
                              std::ref(int_columns), std::ref(double_columns),
                              std::ref(char_columns), std::ref(string_columns));
     }
 
+
     // Wait for all threads to complete
+
+    stringSerThread.join();
     for (auto &thread: threads) {
         thread.join();
     }
+
     c.finalize();
 
     auto end = std::chrono::steady_clock::now();
@@ -348,7 +431,7 @@ py::list load(py::dict pyEnv) {
         ++column_index;
     }
 
-    py::list result;
+
     spdlog::get("pyXCLIENT")->info("starting np array construction");
     // Create numpy arrays for int columns
     for (auto &column: int_columns) {
@@ -388,22 +471,6 @@ py::list load(py::dict pyEnv) {
     }
     spdlog::get("pyXCLIENT")->info("constructed chars");
 
-    for (auto &column: string_columns) {
-        // Create a numpy array with dtype=object
-        py::array str_array = py::array(py::dtype("O"), py::array::ShapeContainer{column.size()});
-
-        // Fill the numpy array with Python string objects
-        auto str_array_data = reinterpret_cast<py::object *>(str_array.mutable_data());
-        for (size_t i = 0; i < column.size(); ++i) {
-            str_array_data[i] = py::reinterpret_steal<py::object>(
-                    PyUnicode_FromStringAndSize(column[i].c_str(), column[i].size()));
-        }
-
-        result.append(str_array);
-        column.clear();
-        column.shrink_to_fit();
-    }
-    spdlog::get("pyXCLIENT")->info("constructed strings");
     auto duration_arrays = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::high_resolution_clock::now() - start_arrays).count();
     spdlog::get("pyXCLIENT")->info("Array creation: {0}s", duration_arrays / 1000);

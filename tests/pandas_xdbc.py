@@ -62,11 +62,12 @@ print("remote array")
 print(data[0].shape)
 
 # print(list[0])
+att_orders = ('S', 'I', 'D', 'C')
 
 start_df = datetime.datetime.now()
 column_names = [col[0] for col in schema]
-data_dict = {column_names[i]: data[i] for i in range(len(column_names))}
-dataset = pd.DataFrame(data_dict, copy=False)
+# data_dict = {column_names[i]: data[i] for i in range(len(column_names))}
+dataset = schemata.reassign_columns(schema, data, att_orders)
 end_df = datetime.datetime.now()
 print("df creation:")
 print((end_df - start_df).total_seconds() * 1000)
