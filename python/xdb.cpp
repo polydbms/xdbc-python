@@ -261,11 +261,13 @@ void serializeStrings(ST_ptr serqueue, std::vector <std::vector<std::string>> &s
         int py_array_idx = 0;
         for (auto &column: string_columns) {
             auto str_array_data = reinterpret_cast<py::object *>(py_arrays[py_array_idx].mutable_data());
+            size_t fixed_length = column[st.startOffset].size();
             for (size_t i = st.startOffset; i < st.endOffset; ++i) {
+                const char *str_data = column[i].data();
                 str_array_data[i] = py::reinterpret_steal<py::object>(
-                        PyUnicode_FromStringAndSize(column[i].c_str(), column[i].size()));
+                        PyUnicode_FromStringAndSize(str_data, fixed_length)
+                );
                 totalDeserialized++;
-
             }
             py_array_idx++;
         }

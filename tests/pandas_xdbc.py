@@ -22,7 +22,7 @@ parser.add_argument('--server_host', type=str, required=True, help="The server h
 parser.add_argument('--server_port', type=str, required=True, help="The server port.")
 
 args = parser.parse_args()
-# build cmd: `cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/ && python ../tests/pandas_xdbc.py `
+# build cmd: `cd /workspace/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/`
 np.set_printoptions(suppress=True)
 pd.set_option('display.max_columns', None)  # or 1000
 pd.set_option('display.max_rows', None)  # or 1000

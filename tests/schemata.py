@@ -56,9 +56,10 @@ sizes = {
 
 keys = {
     'lineitem_sf10': 'l_orderkey',
+    'ss13husallm': 'SERIALNO',
     'inputeventsm': 'subject_id',
     'iotm': 'id',
-    'ss13husallm': 'SERIALNO'}
+    }
 
 schema = {
     'lineitem_sf10': [

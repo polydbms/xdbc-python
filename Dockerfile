@@ -27,7 +27,7 @@ RUN conda --version
 RUN conda update -n base -c defaults conda
 RUN conda create --name python39 python==3.9 -y
 RUN conda install -n \
-    python39 numpy pybind11 xtensor-python xtensor pandas psycopg2 sqlalchemy connectorx turbodbc pyarrow\
+    python39 numpy pybind11 xtensor-python xtensor pandas psycopg2 sqlalchemy connectorx turbodbc pyarrow python-duckdb modin-ray\
      -c conda-forge -y
 
 ENV CONDA_DEFAULT_ENV=python39
