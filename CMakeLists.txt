@@ -17,11 +17,19 @@ find_package(pybind11 REQUIRED)
 
 find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
 find_package(pybind11 REQUIRED CONFIG)
+#find_package(Arrow REQUIRED)
+#find_package(Parquet REQUIRED)
+#find_library(PARQUET_SHARED_LIB parquet REQUIRED)
+# Ensure the library is found
+#if (NOT PARQUET_SHARED_LIB)
+#    message(FATAL_ERROR "Parquet shared library not found.")
+#endif()
+
 #find_package(xtensor REQUIRED)
 #find_package(xtensor-python REQUIRED)
 
 pybind11_add_module(pyxdbc
-        python/xdb.cpp
+        python/xdbc.cpp
         )
 
 #target_include_directories(pyxdbc PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
@@ -33,11 +41,24 @@ include_directories(/xdbc-client/xdbc/)
 #set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
 #set(PYTHON_LIBRARIES "/home/harry/miniconda3/lib/libpython3.9.so")
 
+set(PYARROW_INCLUDE_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages/pyarrow/include")
+set(PYARROW_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages/pyarrow/")
+
+include_directories(${PYARROW_INCLUDE_DIR})
+link_directories(${PYARROW_LIBRARY_DIR})
+# Module 2: pyxparquet
+pybind11_add_module(pyxdbcparquet
+        python/xdbcparquet.cpp
+        )
+target_link_libraries(pyxdbcparquet PUBLIC
+   xdbc pybind11::module -lparquet -larrow -larrow_python
+)
+
 set(PYTHON_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages")
 set(PYTHON_EXECUTABLE "/root/miniconda3/envs/python39/bin/python3")
 set(PYTHON_LIBRARIES "/root/miniconda3/envs/python39/lib/libpython3.9.so")
 
-install(TARGETS pyxdbc
+install(TARGETS pyxdbc pyxdbcparquet
         COMPONENT python
         LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
         )

@@ -27,13 +27,16 @@ RUN conda --version
 RUN conda update -n base -c defaults conda
 RUN conda create --name python39 python==3.9 -y
 RUN conda install -n \
-    python39 numpy pybind11 xtensor-python xtensor pandas psycopg2 sqlalchemy connectorx turbodbc pyarrow python-duckdb modin-ray\
+    python39 numpy pybind11 xtensor-python xtensor pandas psycopg2 sqlalchemy connectorx==0.3.3 turbodbc pyarrow python-duckdb modin-ray==0.30.1\
      -c conda-forge -y
 
 ENV CONDA_DEFAULT_ENV=python39
 ENV CONDA_PREFIX=/root/miniconda3/envs/python39
 ENV PATH="$CONDA_PREFIX/bin:$PATH"
 RUN echo "source activate python39" > ~/.bashrc
+
+RUN pip install pyarrow==18.1.0
+RUN conda install ray-core==2.1.0 -c conda-forge -y
 
 #update postgres odbc driver location
 RUN full_path=$(locate psqlodbca.so | head -n 1) && \
@@ -43,7 +46,7 @@ COPY python/ /workspace/python
 COPY tests/ /workspace/tests
 COPY CMakeLists.txt /workspace
 
-RUN cd /workspace && mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/
+RUN cd /workspace && mkdir -p build && cd build && rm -rf * && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/ && cp pyxdbcparquet.cpython-39-x86_64-linux-gnu.so ../tests/
 
 WORKDIR /workspace

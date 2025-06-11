@@ -17,6 +17,8 @@ parser.add_argument('--parallelism', type=int, required=True, help="The amount o
 parser.add_argument('--chunksize', type=int, required=True, help="The size of the chunk.")
 parser.add_argument('--library', type=str, required=True, help="The library to use for copying the dataframe.")
 parser.add_argument('--table', type=str, required=True, help="The table to copy.")
+parser.add_argument('--debug', type=int, default=0, help="Print statistics on received dataset.")
+
 args = parser.parse_args()
 
 
@@ -42,7 +44,7 @@ def give_df_connectorx(table):
     return cx.read_sql("postgresql://postgres:123456@pg1:5432/db1", "SELECT * FROM " + str(table),
                        protocol="binary",
                        # protocol="csv",
-                       partition_on=schemata.keys[args.table], partition_num=args.parallelism)
+                       partition_on=schemata.keys[args.table].lower(), partition_num=args.parallelism)
 
 
 def give_df_turbodbc(table, method=""):
@@ -113,10 +115,11 @@ elif args.library == 'modin':
 else:
     print("No valid library")
 
-print("min: " + str(dataset[schemata.keys[args.table]].min()))
-print("max: " + str(dataset[schemata.keys[args.table]].max()))
-print("mean: " + str(dataset[schemata.keys[args.table]].mean()))
-print("count: " + str(dataset[schemata.keys[args.table]].count()))
+if args.debug==1:
+    print("min: " + str(dataset[schemata.keys[args.table].lower()].min()))
+    print("max: " + str(dataset[schemata.keys[args.table].lower()].max()))
+    print("mean: " + str(dataset[schemata.keys[args.table].lower()].mean()))
+    print("count: " + str(dataset[schemata.keys[args.table].lower()].count()))
 b = datetime.datetime.now()
 c = b - a
 print(c.total_seconds() * 1000)
