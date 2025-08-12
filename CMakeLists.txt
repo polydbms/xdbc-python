@@ -12,10 +12,14 @@ endif ()
 
 set(CMAKE_CXX_FLAGS "-O3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+# Force CMake to use Python 3.9
+set(Python3_EXECUTABLE /usr/bin/python3.9 CACHE FILEPATH "Path to Python 3.9")
+set(Python3_FIND_STRATEGY LOCATION)
+set(Python3_FIND_ABI ANY)
 
-find_package(pybind11 REQUIRED)
+find_package(Python3 3.9 EXACT REQUIRED COMPONENTS Interpreter Development NumPy)
 
-find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
+
 find_package(pybind11 REQUIRED CONFIG)
 #find_package(Arrow REQUIRED)
 #find_package(Parquet REQUIRED)
@@ -41,8 +45,17 @@ include_directories(/xdbc-client/xdbc/)
 #set(PYTHON_EXECUTABLE "/home/harry/miniconda3/bin/python3")
 #set(PYTHON_LIBRARIES "/home/harry/miniconda3/lib/libpython3.9.so")
 
-set(PYARROW_INCLUDE_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages/pyarrow/include")
-set(PYARROW_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages/pyarrow/")
+execute_process(
+    COMMAND python3.9 -c "import pyarrow, os; print(os.path.join(os.path.dirname(pyarrow.__file__), 'include'))"
+    OUTPUT_VARIABLE PYARROW_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+execute_process(
+    COMMAND python3.9 -c "import pyarrow, os; print(os.path.dirname(pyarrow.__file__))"
+    OUTPUT_VARIABLE PYARROW_LIBRARY_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 include_directories(${PYARROW_INCLUDE_DIR})
 link_directories(${PYARROW_LIBRARY_DIR})
@@ -54,11 +67,11 @@ target_link_libraries(pyxdbcparquet PUBLIC
    xdbc pybind11::module -lparquet -larrow -larrow_python
 )
 
-set(PYTHON_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages")
-set(PYTHON_EXECUTABLE "/root/miniconda3/envs/python39/bin/python3")
-set(PYTHON_LIBRARIES "/root/miniconda3/envs/python39/lib/libpython3.9.so")
+#set(PYTHON_LIBRARY_DIR "/root/miniconda3/envs/python39/lib/python3.9/site-packages")
+#set(PYTHON_EXECUTABLE "/root/miniconda3/envs/python39/bin/python3")
+#set(PYTHON_LIBRARIES "/root/miniconda3/envs/python39/lib/libpython3.9.so")
 
 install(TARGETS pyxdbc pyxdbcparquet
         COMPONENT python
-        LIBRARY DESTINATION "${PYTHON_LIBRARY_DIR}"
+        LIBRARY DESTINATION "${Python3_SITEARCH}"
         )

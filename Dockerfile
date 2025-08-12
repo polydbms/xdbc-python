@@ -1,52 +1,57 @@
 FROM xdbc-client:latest
-ENV PATH="/root/miniconda3/bin:${PATH}"
-ARG PATH="/root/miniconda3/bin:${PATH}"
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install OS deps
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    make \
-    cmake \
-    protobuf-compiler \
-    g++ \
-    libboost-all-dev \
-    libpq-dev \
-    wget \
-    gdb \
-    odbc-postgresql \
-    plocate \
-    nano
+ && apt-get install -y --no-install-recommends \
+    software-properties-common unixodbc-dev \
+    build-essential libboost-all-dev libpq-dev pybind11-dev \
+ && add-apt-repository ppa:deadsnakes/ppa \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+    python3.9 python3.9-distutils python3.9-venv python3.9-dev python3-pip \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN wget \
-    https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh --no-check-certificate \
-    && mkdir /root/.conda \
-    && bash Miniconda3-latest-Linux-x86_64.sh -b \
-    && rm -f Miniconda3-latest-Linux-x86_64.sh
 
-RUN conda --version
-RUN conda update -n base -c defaults conda
-RUN conda create --name python39 python==3.9 -y
-RUN conda install -n \
-    python39 numpy pybind11 xtensor-python xtensor pandas psycopg2 sqlalchemy connectorx==0.3.3 turbodbc pyarrow python-duckdb modin-ray==0.30.1\
-     -c conda-forge -y
+# Upgrade pip
+RUN python3.9 -m pip install --upgrade pip uv
 
-ENV CONDA_DEFAULT_ENV=python39
-ENV CONDA_PREFIX=/root/miniconda3/envs/python39
-ENV PATH="$CONDA_PREFIX/bin:$PATH"
-RUN echo "source activate python39" > ~/.bashrc
+# Install all Python deps together so pybind11 is available before turbodbc builds
+RUN python3.9 -m pip install pybind11
+RUN python3.9 -m pip install \
+    pandas==2.2.* \
+    duckdb==1.0.0 \
+    sqlalchemy==2.0.35 \
+    connectorx==0.3.3 \
+    pyarrow==18.1.0 \
+    modin[ray]==0.30.1 \
+    ray==2.1.0 \
+    psycopg2-binary \
+    turbodbc==4.4.0
 
-RUN pip install pyarrow==18.1.0
-RUN conda install ray-core==2.1.0 -c conda-forge -y
-
-#update postgres odbc driver location
+# Update postgres ODBC driver location
 RUN full_path=$(locate psqlodbca.so | head -n 1) && \
     sed -i "s|Driver=psqlodbca.so|Driver=$full_path|g" /etc/odbcinst.ini
 
+# Copy source
 COPY python/ /workspace/python
 COPY tests/ /workspace/tests
 COPY CMakeLists.txt /workspace
 
+# pyarrow from pip
+RUN python3.9 -m pip install pyarrow==18.1.0
+RUN python3.9 -m pip install numpy
+
+# Build C++ library and install to Python site-packages
 RUN cd /workspace && mkdir -p build && cd build && rm -rf * && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && make && cp pyxdbc.cpython-39-x86_64-linux-gnu.so ../tests/ && cp pyxdbcparquet.cpython-39-x86_64-linux-gnu.so ../tests/
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DPython3_EXECUTABLE=$(which python3.9) \
+        -DPython3_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.9.so && \
+    make && \
+    make install
+
+
+
 
 WORKDIR /workspace
