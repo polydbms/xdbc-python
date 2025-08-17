@@ -41,6 +41,8 @@ COPY CMakeLists.txt /workspace
 # pyarrow from pip
 RUN python3.9 -m pip install pyarrow==18.1.0
 RUN python3.9 -m pip install numpy
+RUN python3.9 -m pip install requests
+RUN python3.9 -m pip install aiohttp
 
 # Build C++ library and install to Python site-packages
 RUN cd /workspace && mkdir -p build && cd build && rm -rf * && \
@@ -51,7 +53,7 @@ RUN cd /workspace && mkdir -p build && cd build && rm -rf * && \
     make && \
     make install
 
-
-
+# The pyarrow shared library is located in its site-packages directory.
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.9/dist-packages/pyarrow:$LD_LIBRARY_PATH
 
 WORKDIR /workspace
