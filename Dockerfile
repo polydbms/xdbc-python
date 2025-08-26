@@ -42,6 +42,7 @@ FileUsage   = 1\n" > /etc/odbcinst.ini
 COPY python/ /workspace/python
 COPY tests/ /workspace/tests
 COPY CMakeLists.txt /workspace
+COPY *.py /workspace/
 
 # pyarrow from pip
 RUN python3.9 -m pip install pyarrow==18.1.0
