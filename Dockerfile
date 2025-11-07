@@ -21,6 +21,8 @@ RUN python3.9 -m pip install pybind11
 # Moved numpy install here to be before turbodbc
 RUN python3.9 -m pip install numpy
 
+RUN python3.9 -m pip install --no-build-isolation turbodbc==4.4.0
+
 RUN python3.9 -m pip install \
     pandas==2.2.* \
     duckdb==1.0.0 \
@@ -28,8 +30,7 @@ RUN python3.9 -m pip install \
     connectorx==0.3.3 \
     modin[ray]==0.30.1 \
     ray==2.1.0 \
-    psycopg2-binary \
-    turbodbc==4.4.0
+    psycopg2-binary
 
 # Update postgres ODBC driver location
 RUN echo "[PostgreSQL ANSI]\n\
